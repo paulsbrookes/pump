@@ -141,7 +141,7 @@ def expectations_breakdown(times, states, e_op, params):
     return expectations
 
 
-def process_trace(trace, start=0.9, stop=1.0):
+def process_trace_states(trace, start=0.9, stop=1.0):
     a = tensor(qeye(2), destroy(trace.params.c_levels))
     n_times = trace.times.shape[0]
     start_idx = int(start * n_times)
@@ -228,3 +228,28 @@ def generate_cut(fd_array, times, params, psi0=None, parallel=False, num_cpus=10
     results = pd.concat(results)
 
     return results
+
+
+def process_trace(trace, modulation=0):
+    value = (trace * np.exp(1j * 2 * np.pi * modulation * trace.index.values)).mean()
+    return value
+
+
+def process_cut(cut, start=0.9, stop=1.0, step=1):
+    ops = ['a', 'a_00', 'a_11', 'a_01', 'a_10']
+    fd_array = cut.index.levels[0]
+    measurements = np.zeros([fd_array.shape[0], len(ops)], dtype=complex)
+
+    for fd_idx, fd in enumerate(fd_array):
+        trace = cut.xs(fd, level='fd')
+        n_times = trace.index.shape[0]
+        start_idx = int(start * n_times)
+        stop_idx = int(stop * n_times)
+        trace = trace.iloc[start_idx:stop_idx:step]
+        modulation = fd - params.fp
+        for op_idx, op in enumerate(ops):
+            measurements[fd_idx, op_idx] = process_trace(trace[op], modulation=modulation)
+
+    measurements = pd.DataFrame(measurements, columns=ops, index=fd_array)
+
+    return measurements
