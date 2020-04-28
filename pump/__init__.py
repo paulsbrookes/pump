@@ -1,1 +1,2 @@
-from .hamiltonian import *
+from .static import *
+from .dynamic import *
